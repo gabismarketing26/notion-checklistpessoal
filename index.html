@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checklist Pessoal</title>
+    <title>Checklist Sincronizado com LOG</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -15,11 +16,7 @@
             --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: var(--font-stack);
@@ -41,220 +38,57 @@
             box-shadow: 0 1px 3px rgba(15, 15, 15, 0.05);
         }
 
-        h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; }
 
-        .input-group {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
+        .input-group { display: flex; gap: 8px; margin-bottom: 16px; }
 
         input[type="text"] {
-            flex: 1;
-            padding: 8px 12px;
-            font-size: 0.9rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background-color: var(--input-bg);
-            outline: none;
+            flex: 1; padding: 8px 12px; font-size: 0.9rem;
+            border: 1px solid var(--border-color); border-radius: 4px;
+            background-color: var(--input-bg); outline: none;
         }
 
-        input[type="text"]:focus {
-            border-color: #a4cdfe;
-            background-color: var(--bg-color);
-        }
+        input[type="text"]:focus { border-color: #a4cdfe; background-color: var(--bg-color); }
 
         .btn-add {
-            padding: 8px 14px;
-            background-color: var(--button-bg);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
+            padding: 8px 14px; background-color: var(--button-bg);
+            color: white; border: none; border-radius: 4px;
+            font-size: 0.9rem; font-weight: 500; cursor: pointer;
         }
 
-        .btn-add:hover {
-            background-color: var(--button-hover);
-        }
+        .btn-add:hover { background-color: var(--button-hover); }
 
-        .todo-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+        .todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 
         .todo-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid #f7f7f5;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 0; border-bottom: 1px solid #f7f7f5;
         }
 
-        .todo-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
+        .todo-left { display: flex; align-items: center; gap: 10px; flex: 1; }
 
         .todo-item input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-            accent-color: var(--button-bg);
+            width: 16px; height: 16px; cursor: pointer; accent-color: var(--button-bg);
         }
 
-        .todo-text {
-            font-size: 0.95rem;
-            word-break: break-word;
-            outline: none;
-            transition: color 0.2s, text-decoration 0.2s;
-        }
+        .todo-text { font-size: 0.95rem; word-break: break-word; outline: none; }
 
-        .todo-item.completed .todo-text {
-            text-decoration: line-through;
-            color: #787774;
-        }
+        .todo-item.completed .todo-text { text-decoration: line-through; color: #787774; }
 
         .btn-delete {
-            background: none;
-            border: none;
-            color: #d44333;
-            cursor: pointer;
-            font-size: 0.85rem;
-            padding: 4px 8px;
-            border-radius: 4px;
-            opacity: 0;
-            transition: opacity 0.2s;
+            background: none; border: none; color: #d44333; cursor: pointer;
+            font-size: 0.85rem; padding: 4px 8px; border-radius: 4px;
+            opacity: 0; transition: opacity 0.2s;
         }
 
-        .todo-item:hover .btn-delete {
-            opacity: 1;
-        }
-
-        .btn-delete:hover {
-            background-color: #fcebeb;
-        }
-
-        .empty-state {
-            font-size: 0.85rem;
-            color: #787774;
-            text-align: center;
-            margin-top: 10px;
-        }
+        .todo-item:hover .btn-delete { opacity: 1; }
+        .btn-delete:hover { background-color: #fcebeb; }
+        .empty-state { font-size: 0.85rem; color: #787774; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>✅ Minhas Tarefas Pessoais</h2>
+        <h2>🔄 Checklist Nuvem + LOG</h2>
         
         <div class="input-group">
-            <input type="text" id="new-task" placeholder="Escreva uma nova tarefa..." autocomplete="off">
-            <button class="btn-add" onclick="addTask()">Adicionar</button>
-        </div>
-
-        <ul class="todo-list" id="todo-list"></ul>
-        <div id="empty-msg" class="empty-state" style="display: none;">Nenhuma tarefa pendente. Estás livre! 🎉</div>
-    </div>
-
-    <script>
-        // Carrega as tarefas salvas no navegador ao abrir a página
-        let tasks = JSON.parse(localStorage.getItem('notion_tasks')) || [];
-
-        function saveTasks() {
-            localStorage.setItem('notion_tasks', JSON.stringify(tasks));
-            renderTasks();
-        }
-
-        function addTask() {
-            const input = document.getElementById('new-task');
-            const text = input.value.trim();
-            
-            if (text === '') return;
-
-            tasks.push({
-                id: Date.now(),
-                text: text,
-                completed: false
-            });
-
-            input.value = '';
-            saveTasks();
-        }
-
-        function toggleTask(id) {
-            tasks = tasks.map(task => {
-                if (task.id === id) {
-                    return { ...task, completed: !task.completed };
-                }
-                return task;
-            });
-            saveTasks();
-        }
-
-        function editTask(id, newText) {
-            tasks = tasks.map(task => {
-                if (task.id === id) {
-                    return { ...task, text: newText.trim() };
-                }
-                return task;
-            });
-            localStorage.setItem('notion_tasks', JSON.stringify(tasks));
-        }
-
-        function deleteTask(id) {
-            tasks = tasks.filter(task => task.id !== id);
-            saveTasks();
-        }
-
-        function renderTasks() {
-            const list = document.getElementById('todo-list');
-            const emptyMsg = document.getElementById('empty-msg');
-            list.innerHTML = '';
-
-            if (tasks.length === 0) {
-                emptyMsg.style.display = 'block';
-                return;
-            } else {
-                emptyMsg.style.display = 'none';
-            }
-
-            tasks.forEach(task => {
-                const li = document.createElement('li');
-                li.className = `todo-item ${task.completed ? 'completed' : ''}`;
-
-                li.innerHTML = `
-                    <div class="todo-left">
-                        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
-                        <span class="todo-text" contenteditable="true" onblur="editTask(${task.id}, this.innerText)">${task.text}</span>
-                    </div>
-                    <button class="btn-delete" onclick="deleteTask(${task.id})">Excluir</button>
-                `;
-
-                list.appendChild(li);
-            });
-        }
-
-        // Permite adicionar tarefas apertando Enter
-        document.getElementById('new-task').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addTask();
-        });
-
-        // Inicializa a lista na tela
-        renderTasks();
-    </script>
-
-</body>
-</html>
