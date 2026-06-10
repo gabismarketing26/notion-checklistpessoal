@@ -15,9 +15,7 @@
             --button-hover: #1a6ab8;
             --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: var(--font-stack);
             background-color: var(--bg-color);
@@ -27,7 +25,6 @@
             align-items: flex-start;
             padding: 16px;
         }
-
         .container {
             width: 100%;
             max-width: 450px;
@@ -37,50 +34,36 @@
             padding: 20px;
             box-shadow: 0 1px 3px rgba(15, 15, 15, 0.05);
         }
-
         h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; }
-
         .input-group { display: flex; gap: 8px; margin-bottom: 16px; }
-
         input[type="text"] {
             flex: 1; padding: 8px 12px; font-size: 0.9rem;
             border: 1px solid var(--border-color); border-radius: 4px;
             background-color: var(--input-bg); outline: none;
         }
-
         input[type="text"]:focus { border-color: #a4cdfe; background-color: var(--bg-color); }
-
         .btn-add {
             padding: 8px 14px; background-color: var(--button-bg);
             color: white; border: none; border-radius: 4px;
             font-size: 0.9rem; font-weight: 500; cursor: pointer;
         }
-
         .btn-add:hover { background-color: var(--button-hover); }
-
         .todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-
         .todo-item {
             display: flex; align-items: center; justify-content: space-between;
             padding: 6px 0; border-bottom: 1px solid #f7f7f5;
         }
-
         .todo-left { display: flex; align-items: center; gap: 10px; flex: 1; }
-
         .todo-item input[type="checkbox"] {
             width: 16px; height: 16px; cursor: pointer; accent-color: var(--button-bg);
         }
-
         .todo-text { font-size: 0.95rem; word-break: break-word; outline: none; }
-
         .todo-item.completed .todo-text { text-decoration: line-through; color: #787774; }
-
         .btn-delete {
             background: none; border: none; color: #d44333; cursor: pointer;
             font-size: 0.85rem; padding: 4px 8px; border-radius: 4px;
             opacity: 0; transition: opacity 0.2s;
         }
-
         .todo-item:hover .btn-delete { opacity: 1; }
         .btn-delete:hover { background-color: #fcebeb; }
         .empty-state { font-size: 0.85rem; color: #787774; text-align: center; margin-top: 10px; }
@@ -92,3 +75,110 @@
         <h2>🔄 Checklist Nuvem + LOG</h2>
         
         <div class="input-group">
+            <input type="text" id="new-task" placeholder="Buscando conexão..." disabled autocomplete="off">
+            <button class="btn-add" id="btn-add" disabled onclick="addTask()">Adicionar</button>
+        </div>
+
+        <ul class="todo-list" id="todo-list"></ul>
+        <div id="empty-msg" class="empty-state">Conectando ao banco de dados...</div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://dsevthvegrlcbslzlpbd.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_qN8GJ16j6zpY3aPFRcytjw_kGQsRaFI";
+
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let tasks = [];
+
+        async function init() {
+            await fetchTasks();
+            document.getElementById('new-task').disabled = false;
+            document.getElementById('new-task').placeholder = "Escreva uma nova tarefa...";
+            document.getElementById('btn-add').disabled = false;
+            
+            _supabase
+                .channel('schema-db-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'tarefas' }, fetchTasks)
+                .subscribe();
+        }
+
+        async function fetchTasks() {
+            const { data, error } = await _supabase
+                .from('tarefas')
+                .select('*')
+                .order('created_at', { ascending: true });
+
+            if (!error) {
+                tasks = data;
+                renderTasks();
+            }
+        }
+
+        async function addTask() {
+            const input = document.getElementById('new-task');
+            const text = input.value.trim();
+            if (text === '') return;
+
+            // Ajustado aqui para 'tarefa' idêntico ao seu banco
+            await _supabase.from('tarefas').insert([{ tarefa: text, completed: false }]);
+            input.value = '';
+        }
+
+        async function toggleTask(id, currentStatus) {
+            const nextStatus = !currentStatus;
+            const timestampLog = nextStatus ? new Date().toISOString() : null;
+
+            await _supabase
+                .from('tarefas')
+                .update({ completed: nextStatus, concluida_em: timestampLog })
+                .eq('id', id);
+        }
+
+        async function editTask(id, newText) {
+            if (newText.trim() === '') return;
+            // Ajustado aqui para 'tarefa' idêntico ao seu banco
+            await _supabase.from('tarefas').update({ tarefa: newText.trim() }).eq('id', id);
+        }
+
+        async function deleteTask(id) {
+            await _supabase.from('tarefas').delete().eq('id', id);
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('todo-list');
+            const emptyMsg = document.getElementById('empty-msg');
+            list.innerHTML = '';
+
+            if (tasks.length === 0) {
+                emptyMsg.style.display = 'block';
+                emptyMsg.innerText = "Nenhuma tarefa pendente. Estás livre! 🎉";
+                return;
+            } else {
+                emptyMsg.style.display = 'none';
+            }
+
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `todo-item ${task.completed ? 'completed' : ''}`;
+
+                // Ajustado aqui de task.text para task.tarefa
+                li.innerHTML = `
+                    <div class="todo-left">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id}, ${task.completed})">
+                        <span class="todo-text" contenteditable="true" onblur="editTask(${task.id}, this.innerText)">${task.tarefa}</span>
+                    </div>
+                    <button class="btn-delete" onclick="deleteTask(${task.id})">Excluir</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        document.getElementById('new-task').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addTask();
+        });
+
+        init();
+    </script>
+
+</body>
+</html>
